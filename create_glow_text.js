@@ -2,6 +2,7 @@
 
 const { spawn } = require('child_process');
 const fs = require('fs');
+const VideoAnalyzer = require('./video_analyzer');
 let ffmpegPath = require('ffmpeg-static');
 if (!fs.existsSync(ffmpegPath) && fs.existsSync(ffmpegPath + '.exe')) {
     ffmpegPath = ffmpegPath + '.exe';
@@ -34,7 +35,27 @@ class TextGlowProcessor {
 
 
     async processVideo(options) {
-        const { inputVideo, outputVideo, text, color = 'white', x = 0.5, y = 0.7, fontSize, enhanced = true, blurBackground = false } = options;
+        const { inputVideo, outputVideo, text, color = 'white', x = 0.5, y = 0.7, fontSize, enhanced = true, blurBackground = false, autoPosition = false } = options;
+        
+        let finalX = x;
+        let finalY = y;
+        
+        // Auto-position text using computer vision
+        if (autoPosition) {
+            try {
+                const analyzer = new VideoAnalyzer();
+                const analysis = await analyzer.suggestTextPosition(inputVideo);
+                if (analysis.confidence > 0.1) {
+                    finalX = analysis.suggestedX;
+                    finalY = analysis.suggestedY;
+                    console.log(`🎯 Using CV-suggested position: (${finalX}, ${finalY})`);
+                } else {
+                    console.log('⚠️ CV analysis had low confidence, using manual position');
+                }
+            } catch (error) {
+                console.log('⚠️ CV analysis failed, using manual position:', error.message);
+            }
+        }
         
         const [core, bright, glow, shadow] = this.colors[color.toLowerCase()] || this.colors.white;
         const fontPath = this.getFontPath();
@@ -63,8 +84,8 @@ class TextGlowProcessor {
         }
         const fontSizeCalc = calculatedSize;
         
-        const xPos = `w*${x}-text_w/2`;
-        const yPos = `h*${y}-text_h/2`;
+        const xPos = `w*${finalX}-text_w/2`;
+        const yPos = `h*${finalY}-text_h/2`;
 
         // Build filter chain
         const filters = blurBackground ? [
@@ -158,6 +179,7 @@ Options:
   --x <0-1>          Horizontal position (default: 0.5)
   --y <0-1>          Vertical position (default: 0.7)
   --size <pixels>    Font size (default: auto)
+  --auto-position    Use computer vision to find optimal text placement
   --blur-background  Use blurred background (default: crop to fit)
 
 Examples:
@@ -177,6 +199,7 @@ Examples:
             case '--x': options.x = parseFloat(value); break;
             case '--y': options.y = parseFloat(value); break;
             case '--size': options.fontSize = parseInt(value); break;
+            case '--auto-position': options.autoPosition = true; i--; break;
             case '--blur-background': options.blurBackground = true; i--; break;
         }
     }

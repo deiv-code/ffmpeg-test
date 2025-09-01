@@ -55,7 +55,7 @@ app.get('/api/videos', (req, res) => {
 // Create new video with neon text effect
 app.post('/api/create', async (req, res) => {
     try {
-        const { inputVideo, text, color, x, y, enhanced, blurBackground, fontSize } = req.body;
+        const { inputVideo, text, color, x, y, enhanced, autoPosition, blurBackground, fontSize } = req.body;
         
         if (!inputVideo || !text) {
             return res.status(400).json({ error: 'Missing required fields: inputVideo, text' });
@@ -74,6 +74,7 @@ app.post('/api/create', async (req, res) => {
             x: x || 0.5,
             y: y || 0.7,
             enhanced: enhanced || false,
+            autoPosition: autoPosition || false,
             blurBackground: blurBackground || false,
             fontSize: fontSize || null
         };

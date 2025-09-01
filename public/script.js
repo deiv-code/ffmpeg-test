@@ -130,6 +130,7 @@ class NeonVideoGallery {
             x: parseFloat(document.getElementById('x').value),
             y: parseFloat(document.getElementById('y').value),
             enhanced: true,
+            autoPosition: document.getElementById('autoPosition').checked,
             blurBackground: document.getElementById('blurBackground').checked
         };
 

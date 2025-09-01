@@ -14,7 +14,10 @@
     "example": "node create_glow_text.js test_input.mp4 output.mp4 \"SAMPLE TEXT\" --color white --y 0.7"
   },
   "dependencies": {
+    "@techstark/opencv-js": "^4.11.0-release.1",
+    "canvas": "^3.2.0",
     "express": "^5.1.0",
-    "ffmpeg-static": "^5.2.0"
+    "ffmpeg-static": "^5.2.0",
+    "jsdom": "^26.1.0"
   }
 }
