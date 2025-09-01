@@ -43,6 +43,7 @@ npm run glow          # Launch the glow text script (command line)
 | `--x` | Horizontal position | 0-1 (0=left, 1=right) | 0.5 |
 | `--y` | Vertical position | 0-1 (0=top, 1=bottom) | 0.7 |
 | `--size` | Font size in pixels | Any number | Auto-calculated |
+| `--auto-position` | Use computer vision for optimal placement | Flag (no value) | false (manual positioning) |
 | `--blur-background` | Use blurred background | Flag (no value) | false (crops to fit) |
 
 ## Examples
@@ -60,6 +61,9 @@ node create_glow_text.js clip.avi output.mp4 "EPIC WIN" --color yellow --x 0.3 -
 
 # Long text (auto-scales to fit)
 node create_glow_text.js input.mp4 output.mp4 "THIS IS A VERY LONG TEXT EXAMPLE" --color green
+
+# Computer vision auto-positioning
+node create_glow_text.js input.mp4 output.mp4 "SMART TEXT" --color blue --auto-position
 
 # Manual line breaks
 node create_glow_text.js input.mp4 output.mp4 "AMAZING\\nGOAL!" --color red
@@ -118,8 +122,9 @@ node create_glow_text.js input.mov output.mp4 "CENTER TEXT" --color green --x 0.
 3. **Inner Glow**: Bright, intense inner light
 4. **Core Text**: Blazing bright center text for maximum impact
 
-### Text Fitting
+### Text Fitting & Positioning
 - **Auto-scaling**: Long text automatically reduces font size to fit screen width
+- **Computer Vision**: `--auto-position` analyzes video to find optimal text placement
 - **Manual breaks**: Use `\\n` for explicit line breaks (e.g., "LINE 1\\nLINE 2")
 - **Margins**: Text stays within 85% of screen width for optimal mobile viewing
 - **Minimum size**: Font won't scale below 40% of base size for readability
@@ -128,6 +133,13 @@ node create_glow_text.js input.mov output.mp4 "CENTER TEXT" --color green --x 0.
 - **Default**: Roboto Bold (included in `static/` directory)
 - **Fallback**: System fonts if Roboto unavailable
 - **Style**: Bold weight for maximum neon visibility
+
+### Computer Vision Auto-Positioning
+- **Edge Detection**: Analyzes video frame using Canny edge detection
+- **Activity Zones**: Compares top 30% vs bottom 30% of frame for visual activity
+- **Smart Placement**: Places text in the region with less visual complexity
+- **Confidence Scoring**: Provides confidence metrics for placement decisions
+- **Fallback**: Automatically falls back to manual positioning if analysis fails
 
 ### Output Quality
 - **Standard Mode**: Good quality, faster processing
@@ -158,3 +170,5 @@ If text doesn't appear:
 - **v1.1**: Added neon illumination with multiple glow layers
 - **v1.2**: Roboto font integration and code optimization
 - **v1.3**: Removed default blur background, added crop-to-fit scaling
+- **v1.4**: Added computer vision auto-positioning and text auto-scaling
+- **v1.5**: Enhanced web interface with video gallery and real-time creation
