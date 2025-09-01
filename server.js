@@ -4,7 +4,7 @@ const path = require('path');
 const TextGlowProcessor = require('./create_glow_text');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
 // Middleware
 app.use(express.static('public'));
