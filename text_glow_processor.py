@@ -101,23 +101,33 @@ class TextGlowProcessor:
             else:
                 filter_complex.append('[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920[base]')
             
-            # Create transparent background for text-only glow
-            filter_complex.append('nullsrc=size=1080x1920:duration=30[null]')
+            # Draw text directly on base video first
+            drawtext_base = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}:x={x_pos}:y={y_pos}'
+            filter_complex.append(f'[base]{drawtext_base}[withtext]')
             
-            # Draw semi-transparent text on transparent background for glow
-            glow_alpha = 0.4  # Reduced opacity for subtle glow
-            drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{glow_alpha}:x={x_pos}:y={y_pos}'
-            filter_complex.append(f'[null]{drawtext_glow}[txt]')
+            # Create transparent backgrounds for glow layers using nullsrc
+            filter_complex.append('nullsrc=size=1080x1920:duration=30[null1]')
+            filter_complex.append('nullsrc=size=1080x1920:duration=30[null2]')
             
-            # Apply blur to create authentic glow
-            filter_complex.append('[txt]gblur=sigma=10[glow]')
+            # Create multiple glow layers for authentic neon effect
             
-            # Overlay blurred glow onto base video  
-            filter_complex.append('[base][glow]overlay[withglow]')
+            # Outer glow - wide, subtle
+            outer_glow_alpha = 0.15
+            drawtext_outer = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{outer_glow_alpha}:x={x_pos}:y={y_pos}'
+            filter_complex.append(f'[null1]{drawtext_outer}[outer_txt]')
+            filter_complex.append('[outer_txt]gblur=sigma=15[outer_glow]')
             
-            # Add final sharp text on top
-            drawtext_final = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}:x={x_pos}:y={y_pos}'
-            filter_complex.append(f'[withglow]{drawtext_final}[final]')
+            # Inner glow - tighter, more intense  
+            inner_glow_alpha = 0.3
+            drawtext_inner = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{inner_glow_alpha}:x={x_pos}:y={y_pos}'
+            filter_complex.append(f'[null2]{drawtext_inner}[inner_txt]')
+            filter_complex.append('[inner_txt]gblur=sigma=8[inner_glow]')
+            
+            # Apply outer glow over text
+            filter_complex.append('[withtext][outer_glow]overlay[with_outer]')
+            
+            # Apply inner glow over previous result
+            filter_complex.append('[with_outer][inner_glow]overlay[final]')
             
             # Create output with raw filter_complex
             output = ffmpeg.output(
