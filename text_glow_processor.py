@@ -105,29 +105,19 @@ class TextGlowProcessor:
             drawtext_base = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}:x={x_pos}:y={y_pos}'
             filter_complex.append(f'[base]{drawtext_base}[withtext]')
             
-            # Create transparent backgrounds for glow layers using nullsrc
-            filter_complex.append('nullsrc=size=1080x1920:duration=30[null1]')
-            filter_complex.append('nullsrc=size=1080x1920:duration=30[null2]')
+            # Create single controlled glow effect - tight to text only
+            filter_complex.append('nullsrc=size=1080x1920:duration=30[null]')
             
-            # Create multiple glow layers for authentic neon effect
+            # Single precise glow layer - much tighter and more controlled
+            glow_alpha = 0.2  # Reduced from dual layer approach
+            drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{glow_alpha}:x={x_pos}:y={y_pos}'
+            filter_complex.append(f'[null]{drawtext_glow}[glow_txt]')
             
-            # Outer glow - wide, subtle
-            outer_glow_alpha = 0.15
-            drawtext_outer = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{outer_glow_alpha}:x={x_pos}:y={y_pos}'
-            filter_complex.append(f'[null1]{drawtext_outer}[outer_txt]')
-            filter_complex.append('[outer_txt]gblur=sigma=15[outer_glow]')
+            # Apply minimal blur to keep glow tight to text edges
+            filter_complex.append('[glow_txt]gblur=sigma=4[glow]')  # Much smaller blur radius
             
-            # Inner glow - tighter, more intense  
-            inner_glow_alpha = 0.3
-            drawtext_inner = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{inner_glow_alpha}:x={x_pos}:y={y_pos}'
-            filter_complex.append(f'[null2]{drawtext_inner}[inner_txt]')
-            filter_complex.append('[inner_txt]gblur=sigma=8[inner_glow]')
-            
-            # Apply outer glow over text
-            filter_complex.append('[withtext][outer_glow]overlay[with_outer]')
-            
-            # Apply inner glow over previous result
-            filter_complex.append('[with_outer][inner_glow]overlay[final]')
+            # Apply controlled glow over text
+            filter_complex.append('[withtext][glow]overlay[final]')
             
             # Create output with raw filter_complex
             output = ffmpeg.output(
