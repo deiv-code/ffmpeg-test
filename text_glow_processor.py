@@ -101,23 +101,23 @@ class TextGlowProcessor:
             else:
                 filter_complex.append('[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920[base]')
             
-            # Draw text directly on base video first
-            drawtext_base = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}:x={x_pos}:y={y_pos}'
-            filter_complex.append(f'[base]{drawtext_base}[withtext]')
-            
-            # Create single controlled glow effect - tight to text only
+            # Create integrated glow effect - glow first, then sharp text over it
             filter_complex.append('nullsrc=size=1080x1920:duration=30[null]')
             
-            # Single precise glow layer - more prominent but still controlled
-            glow_alpha = 0.35  # Increased for more prominence while staying controlled
+            # Create subtle glow layer that text will sit on top of
+            glow_alpha = 0.3  # Slightly increased to maintain visibility with tighter blur
             drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{glow_alpha}:x={x_pos}:y={y_pos}'
             filter_complex.append(f'[null]{drawtext_glow}[glow_txt]')
             
-            # Apply controlled blur to keep glow tight but more visible
-            filter_complex.append('[glow_txt]gblur=sigma=6[glow]')  # Slightly increased for more prominence
+            # Apply tight blur to keep glow close to text edges
+            filter_complex.append('[glow_txt]gblur=sigma=3[glow]')  # Much tighter blur for subtle edge glow
             
-            # Apply controlled glow over text
-            filter_complex.append('[withtext][glow]overlay[final]')
+            # Apply glow to base video first
+            filter_complex.append('[base][glow]overlay[with_glow_bg]')
+            
+            # Now add sharp, bright text over the glow for integrated effect
+            drawtext_final = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}:x={x_pos}:y={y_pos}'
+            filter_complex.append(f'[with_glow_bg]{drawtext_final}[final]')
             
             # Create output with raw filter_complex
             output = ffmpeg.output(
