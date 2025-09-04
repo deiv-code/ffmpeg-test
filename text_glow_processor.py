@@ -85,47 +85,51 @@ class TextGlowProcessor:
                 base = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
                                         .filter('crop', 1080, 1920)
 
-            # Use simple multiple drawtext approach for reliable glow effect
-            # Add multiple layers of text with different alpha values to simulate glow
-            current = base
+            # Use raw filter_complex approach to replicate Node.js glow effect exactly
+            # This ensures proper filter graph construction for blur-based glow
             
-            # Create glow layers with decreasing opacity (outermost to innermost)
-            glow_layers = [
-                {'alpha': 0.3, 'description': 'Outer glow'},
-                {'alpha': 0.5, 'description': 'Medium glow'}, 
-                {'alpha': 0.7, 'description': 'Inner glow'}
-            ]
+            # Prepare filter complex chain (same as working Node.js version)
+            filter_complex = []
             
-            # Add each glow layer
-            for layer in glow_layers:
-                current = ffmpeg.drawtext(
-                    current,
-                    text=processed_text,
-                    fontfile=font_path,
-                    fontsize=calculated_font_size + 4,  # Slightly larger for glow effect
-                    fontcolor=neon_color + f'@{layer["alpha"]}',
-                    x=x_pos,
-                    y=y_pos
-                )
+            # Scale and crop base video
+            if blur_background:
+                filter_complex.extend([
+                    '[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,gblur=sigma=15[bg]',
+                    '[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[main]',
+                    '[bg][main]overlay=(W-w)/2:(H-h)/2[base]'
+                ])
+            else:
+                filter_complex.append('[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920[base]')
+            
+            # Create transparent background for text-only glow
+            filter_complex.append('nullsrc=size=1080x1920:duration=30[null]')
+            
+            # Draw semi-transparent text on transparent background
+            glow_alpha = 0.7
+            drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{glow_alpha}:x={x_pos}:y={y_pos}'
+            filter_complex.append(f'[null]{drawtext_glow}[txt]')
+            
+            # Apply blur to create authentic glow
+            filter_complex.append('[txt]gblur=sigma=15[glow]')
+            
+            # Overlay blurred glow onto base video  
+            filter_complex.append('[base][glow]overlay[withglow]')
             
             # Add final sharp text on top
-            final = ffmpeg.drawtext(
-                current,
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color,
-                x=x_pos,
-                y=y_pos
-            )
-
-            # Output with audio
+            drawtext_final = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}:x={x_pos}:y={y_pos}'
+            filter_complex.append(f'[withglow]{drawtext_final}[final]')
+            
+            # Create output with raw filter_complex
             output = ffmpeg.output(
-                final,
-                input_stream.audio,
+                input_stream,
                 output_video,
+                filter_complex=';'.join(filter_complex),
+                **{
+                    'map:v': '[final]',
+                    'map:a': '0:a'
+                },
                 vcodec='libx264',
-                preset='fast',
+                preset='fast', 
                 crf=23,
                 acodec='aac',
                 audio_bitrate='128k'
