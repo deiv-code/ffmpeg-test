@@ -60,189 +60,6 @@ class TextGlowProcessor:
         return calculated_size
  
     def process_video(self, input_video, output_video, text, color='white', x=0.5, y=0.7,
-                  font_size=None, blur_background=False):
-        """Process video with true neon glow using blur and blend"""
-
-        neon_color = self.colors.get(color.lower(), self.colors['white'])
-        font_path = self.get_font_path()
-        calculated_font_size = self.calculate_font_size(text, font_size)
-
-        x_pos = f"w*{x}-text_w/2"
-        y_pos = f"h*{y}-text_h/2"
-        processed_text = text.replace('\\n', '\n').replace("'", r"\'")  # Escape quotes
-
-        try:
-            input_stream = ffmpeg.input(input_video)
-
-            # Prepare base video
-            if blur_background:
-                bg = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
-                                    .filter('crop', 1080, 1920) \
-                                    .filter('gblur', sigma=15)
-                main = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='decrease')
-                base = ffmpeg.overlay(bg, main, x='(W-w)/2', y='(H-h)/2')
-            else:
-                base = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
-                                        .filter('crop', 1080, 1920)
-
-            # Method 1: True glow using zero-offset shadow technique
-            # Creates authentic glow that emanates from text itself
-            final = ffmpeg.drawtext(
-                base,
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color,                # Use glow color for text
-                shadowcolor=neon_color + '@0.6',     # Semi-transparent glow underneath
-                shadowx=0,                           # Zero offset for true glow effect
-                shadowy=0,                           # Zero offset for true glow effect  
-                x=x_pos,
-                y=y_pos
-            )
-
-            # Output with audio
-            output = ffmpeg.output(
-                final,
-                input_stream.audio,
-                output_video,
-                vcodec='libx264',
-                preset='fast',
-                crf=23,
-                acodec='aac',
-                audio_bitrate='128k'
-            ).global_args('-movflags', '+faststart').overwrite_output()
-
-            print('Running FFmpeg...')
-            ffmpeg.run(output, quiet=False)
-            print('Video processing completed successfully!')
-
-        except ffmpeg.Error as e:
-            print(f"FFmpeg failed: {e}")
-            raise
-        except Exception as e:
-            print(f"Processing failed: {e}")
-            raise
-    
-    def process_video_advanced_glow(self, input_video, output_video, text, color='white', x=0.5, y=0.7,
-                                font_size=None, blur_background=False):
-        """Process video with advanced neon glow using multiple blur layers"""
-
-        neon_color = self.colors.get(color.lower(), self.colors['white'])
-        font_path = self.get_font_path()
-        calculated_font_size = self.calculate_font_size(text, font_size)
-
-        x_pos = f"w*{x}-text_w/2"
-        y_pos = f"h*{y}-text_h/2"
-        processed_text = text.replace('\\n', '\n').replace("'", r"\'")
-
-        try:
-            input_stream = ffmpeg.input(input_video)
-
-            # Prepare base video
-            if blur_background:
-                bg = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
-                                    .filter('crop', 1080, 1920) \
-                                    .filter('gblur', sigma=15)
-                main = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='decrease')
-                base = ffmpeg.overlay(bg, main, x='(W-w)/2', y='(H-h)/2')
-            else:
-                base = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
-                                        .filter('crop', 1080, 1920)
-
-            # Create multiple glow layers using transparent backgrounds (text-only blur)
-            transparent = ffmpeg.input('color=black@0.0:size=1080x1920:duration=30', f='lavfi')
-
-            # Create text-only glow layers with different blur levels
-            glow_layers = []
-            
-            # Huge outer glow (most radiant) 
-            glow_huge = ffmpeg.drawtext(
-                transparent,
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color + '@0.4',  # Semi-transparent for layering
-                x=x_pos,
-                y=y_pos
-            ).filter('gblur', sigma=25)  # Very large blur
-            glow_layers.append(glow_huge)
-
-            # Large outer glow  
-            glow_large = ffmpeg.drawtext(
-                transparent,
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color + '@0.5',
-                x=x_pos,
-                y=y_pos
-            ).filter('gblur', sigma=15)  # Large blur
-            glow_layers.append(glow_large)
-
-            # Medium glow
-            glow_medium = ffmpeg.drawtext(
-                transparent,
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color + '@0.6',
-                x=x_pos,
-                y=y_pos
-            ).filter('gblur', sigma=8)  # Medium blur
-            glow_layers.append(glow_medium)
-
-            # Small inner glow
-            glow_small = ffmpeg.drawtext(
-                transparent,
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color + '@0.7',
-                x=x_pos,
-                y=y_pos
-            ).filter('gblur', sigma=3)  # Small blur
-            glow_layers.append(glow_small)
-
-            # Overlay all glow layers onto the base video
-            current = base
-            for glow in glow_layers:
-                current = ffmpeg.overlay(current, glow)
-
-            # Add final sharp text on top
-            final = ffmpeg.drawtext(
-                current,
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color,
-                x=x_pos,
-                y=y_pos
-            )
-
-            # Output with audio
-            output = ffmpeg.output(
-                final,
-                input_stream.audio,
-                output_video,
-                vcodec='libx264',
-                preset='fast',
-                crf=23,
-                acodec='aac',
-                audio_bitrate='128k'
-            ).global_args('-movflags', '+faststart').overwrite_output()
-
-            print('Running FFmpeg with advanced glow...')
-            ffmpeg.run(output, quiet=False)
-            print('Video processing completed successfully!')
-
-        except ffmpeg.Error as e:
-            print(f"FFmpeg failed: {e}")
-            raise
-        except Exception as e:
-            print(f"Processing failed: {e}")
-            raise
-
-    def process_video_clean_glow(self, input_video, output_video, text, color='white', x=0.5, y=0.7,
                                 font_size=None, blur_background=False):
         """Process video using clean split/blur/overlay approach for text-only glow"""
         
@@ -312,7 +129,7 @@ class TextGlowProcessor:
                 audio_bitrate='128k'
             ).global_args('-movflags', '+faststart').overwrite_output()
 
-            print('Running FFmpeg with clean glow...')
+            print('Running FFmpeg...')
             ffmpeg.run(output, quiet=False)
             print('Video processing completed successfully!')
 
@@ -351,10 +168,6 @@ Examples:
     parser.add_argument('--size', type=int, help='Font size in pixels (default: auto)')
     parser.add_argument('--no-blur-background', action='store_true',
                        help='Use simple crop to fit (default: blurred background with centered video)')
-    parser.add_argument('--advanced', action='store_true',
-                       help='Use advanced multi-layer glow effect (slower but better quality)')
-    parser.add_argument('--clean', action='store_true',
-                       help='Use clean split/blur/overlay glow effect (recommended for best quality)')
     
     args = parser.parse_args()
     
@@ -370,39 +183,16 @@ Examples:
     print(f"Processing: {args.text} ({args.color})")
     
     try:
-        if args.clean:
-            processor.process_video_clean_glow(
-                args.input_video,
-                args.output_video,
-                args.text,
-                color=args.color,
-                x=args.x,
-                y=args.y,
-                font_size=args.size,
-                blur_background=not args.no_blur_background
-            )
-        elif args.advanced:
-            processor.process_video_advanced_glow(
-                args.input_video,
-                args.output_video,
-                args.text,
-                color=args.color,
-                x=args.x,
-                y=args.y,
-                font_size=args.size,
-                blur_background=not args.no_blur_background
-            )
-        else:
-            processor.process_video(
-                args.input_video,
-                args.output_video,
-                args.text,
-                color=args.color,
-                x=args.x,
-                y=args.y,
-                font_size=args.size,
-                blur_background=not args.no_blur_background
-            )
+        processor.process_video(
+            args.input_video,
+            args.output_video,
+            args.text,
+            color=args.color,
+            x=args.x,
+            y=args.y,
+            font_size=args.size,
+            blur_background=not args.no_blur_background
+        )
         print(f"Output: {args.output_video}")
         
     except Exception as e:
