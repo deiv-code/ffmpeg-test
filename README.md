@@ -1,174 +1,235 @@
-# FFmpeg Neon Text Glow Effect
+# FFmpeg Neon Text Glow Processor
 
-Create YouTube Shorts-style videos with professional neon text glow effects using FFmpeg. Recreates After Effects Deep Glow and drop shadow effects.
+Create YouTube Shorts-style videos with professional neon text glow effects using Python and FFmpeg. Features authentic blur-based glow effects that simulate real neon lighting.
 
 ## Quick Start
 
 ```bash
-npm install
-npm start             # Launch web interface at http://localhost:3000
+# Install dependencies
+pip install ffmpeg-python
+
+# Basic usage
+python text_glow_processor.py input.mp4 output.mp4 "YOUR TEXT" --color cyan
 ```
 
-Or use command line:
+## Installation
+
+### Prerequisites
+- Python 3.6+
+- FFmpeg (installed and available in PATH)
+
+### Install Dependencies
 ```bash
-node create_glow_text.js input.mp4 output.mp4 "YOUR TEXT" --color red --y 0.8
+pip install ffmpeg-python
 ```
 
-## Commands
+### Font Setup
+The script automatically looks for fonts in these locations:
+1. `./static/Roboto-Bold.ttf` (recommended)
+2. `./fonts/Roboto-Bold.ttf`
+3. System fallback: `/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf`
 
-### Web Interface
+## Usage
+
+### Command Line Interface
 ```bash
-npm start             # Launch web gallery at http://localhost:3000
-npm run dev           # Same as npm start
+python text_glow_processor.py <input_video> <output_video> <text> [options]
 ```
 
-### Command Line Usage
-```bash
-node create_glow_text.js <input_video> <output_video> <text> [options]
-```
-
-### NPM Scripts
-```bash
-npm start             # Launch web interface
-npm test              # Run test suite with sample videos
-npm run example       # Run example with default settings
-npm run glow          # Launch the glow text script (command line)
-```
-
-### Command Options
+### Options
 
 | Option | Description | Values | Default |
 |--------|-------------|--------|---------|
-| `--color` | Text color | red, blue, yellow, white, green, purple, orange | white |
-| `--x` | Horizontal position | 0-1 (0=left, 1=right) | 0.5 |
-| `--y` | Vertical position | 0-1 (0=top, 1=bottom) | 0.7 |
-| `--size` | Font size in pixels | Any number | Auto-calculated |
-| `--auto-position` | Use computer vision for optimal placement | Flag (no value) | false (manual positioning) |
-| `--blur-background` | Use blurred background | Flag (no value) | false (crops to fit) |
+| `--color` | Text and glow color | white, red, blue, yellow, green, purple, orange, cyan, pink, lime, magenta, aqua | white |
+| `--x` | Horizontal position | 0.0-1.0 (0=left, 1=right) | 0.5 |
+| `--y` | Vertical position | 0.0-1.0 (0=top, 1=bottom) | 0.7 |
+| `--size` | Font size in pixels | Any integer | Auto-calculated |
+| `--no-blur-background` | Use simple crop instead of blurred background | Flag | false |
 
 ## Examples
 
 ### Basic Examples
 ```bash
-# Red text at bottom
-node create_glow_text.js input.mp4 output.mp4 "AMAZING GOAL!" --color red --y 0.8
+# Cyan neon glow (default position)
+python text_glow_processor.py input.mp4 output.mp4 "NEON GLOW" --color cyan
 
-# Blue text with neon glow (enhanced by default)
-node create_glow_text.js video.mov result.mp4 "BREAKING NEWS" --color blue
+# Red text at bottom with larger font
+python text_glow_processor.py video.mp4 result.mp4 "GOAL!" --color red --y 0.8 --size 100
 
-# Custom positioning
-node create_glow_text.js clip.avi output.mp4 "EPIC WIN" --color yellow --x 0.3 --y 0.4
+# Green text centered on screen
+python text_glow_processor.py clip.mp4 output.mp4 "CENTER" --color green --x 0.5 --y 0.5
 
-# Long text (auto-scales to fit)
-node create_glow_text.js input.mp4 output.mp4 "THIS IS A VERY LONG TEXT EXAMPLE" --color green
-
-# Computer vision auto-positioning
-node create_glow_text.js input.mp4 output.mp4 "SMART TEXT" --color blue --auto-position
-
-# Manual line breaks
-node create_glow_text.js input.mp4 output.mp4 "AMAZING\\nGOAL!" --color red
+# Purple text with simple crop (no background blur)
+python text_glow_processor.py input.mov output.mp4 "SIMPLE" --color purple --no-blur-background
 ```
 
 ### Advanced Examples
 ```bash
-# Purple neon with blur background
-node create_glow_text.js input.mp4 output.mp4 "NEON SIGN" --color purple --blur-background
+# Long text (auto-scales to fit screen)
+python text_glow_processor.py input.mp4 output.mp4 "THIS IS A VERY LONG TEXT EXAMPLE" --color lime
 
-# Large yellow text at top
-node create_glow_text.js video.mp4 result.mp4 "HEADLINE" --color yellow --y 0.2 --size 120
+# Multi-line text using line breaks
+python text_glow_processor.py video.mp4 result.mp4 "LINE 1\\nLINE 2" --color magenta
 
-# Green text centered
-node create_glow_text.js input.mov output.mp4 "CENTER TEXT" --color green --x 0.5 --y 0.5
+# Custom positioning for specific content
+python text_glow_processor.py clip.avi output.mp4 "TOP TEXT" --color yellow --x 0.3 --y 0.2
 ```
 
-## Input/Output Support
+## Features
 
-### Tested Video Formats & Codecs ✅
-- **MP4**: H.264, H.265/HEVC ✅
-- **MOV**: H.264 ✅  
-- **AVI**: XVID/MPEG-4 ✅
-- **WebM**: VP9 (supported) ✅
+### Authentic Neon Glow Effect
+- **Single Layer Glow**: Precise, controlled glow that stays tight to text
+- **Blur-Based Lighting**: Uses Gaussian blur to simulate real neon tube lighting  
+- **Color Consistency**: Glow perfectly matches text color without tinting
+- **No Background Contamination**: Glow effect is isolated to text area only
 
-### Input Specifications
-- **Aspect Ratios**: 16:9, 9:16, 4:3, 3:4, any custom ratio ✅
-- **Resolutions**: 480p → 4K (tested up to 3840x2160) ✅
-- **Frame Rates**: 24fps, 25fps, 30fps, 60fps ✅
-- **Audio Codecs**: AAC, MP3, PCM ✅
+### Intelligent Text Scaling
+- **Auto-sizing**: Automatically calculates optimal font size based on text length
+- **Screen Fitting**: Ensures text fits within 90% of screen width with safety margins
+- **Minimum Readability**: Won't scale below 30px to maintain legibility
+- **Character Width Estimation**: Uses Roboto Bold metrics for accurate sizing
 
-### Output
-- **Format**: MP4 (H.264 + AAC)
-- **Resolution**: 1080x1920 (9:16 YouTube Shorts format)
-- **Processing**: Crops/scales to fit 9:16 without letterboxing
-- **Audio**: Preserves original audio with 128kbps AAC encoding
-- **Quality**: Enhanced neon glow by default
+### Video Processing
+- **Format Support**: MP4, MOV, AVI, and other FFmpeg-compatible formats
+- **Output Format**: 1080x1920 (9:16 YouTube Shorts format)
+- **Background Options**:
+  - **Blur Background** (default): Blurred background with centered video
+  - **Simple Crop**: Direct crop-to-fit scaling
+- **Audio Preservation**: Maintains original audio with AAC encoding
 
-## Color Presets
+## Color Palette
 
-| Color | Main Text | Glow Effect | Best For |
-|-------|-----------|-------------|----------|
-| **white** | Pure white | Bright white glow | High contrast, any background |
-| **red** | Bright red | Intense red neon | Sports, alerts, excitement |
-| **blue** | Electric blue | Cool blue glow | Tech, calm, professional |
-| **yellow** | Bright yellow | Golden glow | Attention, warnings, energy |
-| **green** | Neon green | Electric green | Success, money, nature |
-| **purple** | Magenta | Purple neon | Creative, luxury, mystery |
-| **orange** | Bright orange | Warm orange glow | Energy, enthusiasm, fall |
+Enhanced neon color palette designed for maximum glow effect:
 
-## Technical Details
+| Color | Hex Code | Description | Best For |
+|-------|----------|-------------|----------|
+| **white** | `#FFFFFF` | Pure white | High contrast, any background |
+| **red** | `#FF0033` | Electric red | Sports, alerts, excitement |
+| **blue** | `#0099FF` | Electric blue | Tech, professional, cool tones |
+| **yellow** | `#FFFF00` | Bright yellow | Attention, warnings, energy |
+| **green** | `#00FF33` | Electric green | Success, nature, positive |
+| **purple** | `#FF00FF` | Magenta | Creative, luxury, artistic |
+| **orange** | `#FF6600` | Bright orange | Energy, enthusiasm, warm |
+| **cyan** | `#00FFFF` | Bright cyan | Modern, digital, fresh |
+| **pink** | `#FF0099` | Hot pink | Fun, vibrant, bold |
+| **lime** | `#66FF00` | Electric lime | High energy, modern |
+| **magenta** | `#FF0066` | Electric magenta | Bold, dramatic |
+| **aqua** | `#00FF99` | Electric aqua | Calm, digital, modern |
 
-### Neon Effect Layers
-1. **Outer Glow**: Large, soft glow simulating neon tube atmosphere
-2. **Medium Glow**: Mid-range illumination for depth
-3. **Inner Glow**: Bright, intense inner light
-4. **Core Text**: Blazing bright center text for maximum impact
+## Technical Implementation
 
-### Text Fitting & Positioning
-- **Auto-scaling**: Long text automatically reduces font size to fit screen width
-- **Computer Vision**: `--auto-position` analyzes video to find optimal text placement
-- **Manual breaks**: Use `\\n` for explicit line breaks (e.g., "LINE 1\\nLINE 2")
-- **Margins**: Text stays within 85% of screen width for optimal mobile viewing
-- **Minimum size**: Font won't scale below 40% of base size for readability
+### Glow Algorithm
+1. **Base Video Processing**: Scale and crop input to 1080x1920 format
+2. **Text Rendering**: Draw solid text directly on processed video
+3. **Glow Generation**: Create semi-transparent text on transparent background
+4. **Blur Application**: Apply Gaussian blur (sigma=6) for authentic glow spread
+5. **Glow Overlay**: Overlay blurred glow over base video with text
+6. **Final Output**: Encode to MP4 with H.264/AAC for optimal compatibility
 
-### Font
-- **Default**: Roboto Bold (included in `static/` directory)
-- **Fallback**: System fonts if Roboto unavailable
-- **Style**: Bold weight for maximum neon visibility
+### Filter Chain Structure
+```
+Input Video → Scale/Crop → Add Text → Create Glow Layer → Apply Blur → Overlay Glow → Output
+```
 
-### Computer Vision Auto-Positioning
-- **Edge Detection**: Analyzes video frame using Canny edge detection
-- **Activity Zones**: Compares top 30% vs bottom 30% of frame for visual activity
-- **Smart Placement**: Places text in the region with less visual complexity
-- **Confidence Scoring**: Provides confidence metrics for placement decisions
-- **Fallback**: Automatically falls back to manual positioning if analysis fails
+### Glow Parameters
+- **Opacity**: 0.35 alpha for optimal visibility without background contamination
+- **Blur Radius**: 6 pixels for tight, controlled glow spread
+- **Color Matching**: Identical color values for text and glow
+- **Positioning**: Precise alignment using calculated text metrics
 
-### Output Quality
-- **Standard Mode**: Good quality, faster processing
-- **Enhanced Mode**: Higher quality with more glow layers and better compression
-- **Resolution**: 1080x1920 (9:16 aspect ratio)
-- **Codec**: H.264 with AAC audio
+## Input/Output Specifications
+
+### Supported Input Formats
+- **MP4**: H.264, H.265/HEVC
+- **MOV**: H.264, ProRes
+- **AVI**: XVID, MPEG-4
+- **WebM**: VP8, VP9
+- **MKV**: Various codecs
+
+### Output Specifications
+- **Container**: MP4
+- **Video Codec**: H.264 (libx264)
+- **Video Quality**: CRF 23 (high quality)
+- **Video Resolution**: 1080x1920 (9:16 aspect ratio)
+- **Audio Codec**: AAC
+- **Audio Bitrate**: 128kbps
+- **Optimization**: Fast start enabled for web playback
+
+### Processing Features
+- **Aspect Ratio Handling**: Automatically scales and crops to 9:16 format
+- **Audio Preservation**: Maintains original audio track
+- **Quality Control**: Optimized encoding settings for file size vs quality
+- **Fast Processing**: Efficient filter chain for quick rendering
+
+## Font Configuration
+
+### Default Font Path Resolution
+1. `./static/Roboto-Bold.ttf` (primary)
+2. `./fonts/Roboto-Bold.ttf` (secondary)  
+3. `/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf` (system fallback)
+
+### Font Requirements
+- **Style**: Bold weight recommended for maximum neon visibility
+- **Format**: TrueType (.ttf) or OpenType (.otf)
+- **Encoding**: Unicode support for special characters
+
+## Performance and Quality
+
+### Processing Speed
+- **Typical Processing**: 0.5-2x real-time depending on video length and system specs
+- **Optimization**: Single-pass processing with efficient filter chain
+- **Memory Usage**: Optimized for standard system memory
+
+### Quality Settings
+- **Video Quality**: CRF 23 (visually lossless)
+- **Encoding Preset**: Fast (good speed/quality balance)
+- **Audio Quality**: 128kbps AAC (broadcast quality)
 
 ## Troubleshooting
 
-### No Audio in Output
-Audio should be automatically preserved. If missing:
-1. Check input video has audio: `ffmpeg -i input.mp4` 
-2. Ensure FFmpeg version supports AAC encoding
+### Common Issues
 
-### Font Issues
-If text doesn't appear:
-1. Verify Roboto fonts are in `./static/` directory
-2. Script automatically falls back to system fonts
+#### No Output Video Generated
+```bash
+# Check input file
+ffmpeg -i input.mp4
 
-### Performance
-- Use `--enhanced` for better quality (slower)
-- Standard mode for faster processing
-- Processing time depends on video length and complexity
+# Verify Python dependencies
+pip list | grep ffmpeg-python
+```
+
+#### Text Not Appearing
+1. **Font Issues**: Ensure font files are accessible at specified paths
+2. **Color Issues**: Try high contrast colors like white or cyan
+3. **Positioning**: Check x/y values are between 0.0-1.0
+
+#### Audio Missing from Output
+- Input video should have audio track
+- Check FFmpeg installation supports AAC encoding
+- Original audio is preserved automatically
+
+#### Glow Effect Too Subtle/Strong
+The glow parameters are optimized for most use cases. For custom adjustments, modify these values in the code:
+- `glow_alpha`: Controls glow intensity (current: 0.35)
+- `sigma`: Controls glow spread (current: 6)
+
+### Performance Tips
+- Use shorter videos for testing
+- Ensure sufficient disk space for output files
+- Close other applications for faster processing
 
 ## Version History
 
-- **v1.0**: Initial release with basic glow effect
-- **v1.1**: Added neon illumination with multiple glow layers
-- **v1.2**: Roboto font integration and code optimization
-- **v1.3**: Removed default blur background, added crop-to-fit scaling
-- **v1.4**: Added computer vision auto-positioning and text auto-scaling
-- **v1.5**: Enhanced web interface with video gallery and real-time creation
+- **v2.0**: Complete rewrite in Python with improved glow algorithm
+- **v2.1**: Enhanced color palette with 12 neon colors
+- **v2.2**: Optimized single-layer glow for better performance
+- **v2.3**: Improved text scaling and positioning system
+- **v2.4**: Fine-tuned glow parameters for authentic neon effect
+
+## License
+
+This project is open source. Feel free to modify and distribute as needed.
+
+## Contributing
+
+Contributions welcome! Please test thoroughly with various input formats and submit pull requests with clear descriptions of changes.

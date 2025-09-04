@@ -108,13 +108,13 @@ class TextGlowProcessor:
             # Create single controlled glow effect - tight to text only
             filter_complex.append('nullsrc=size=1080x1920:duration=30[null]')
             
-            # Single precise glow layer - much tighter and more controlled
-            glow_alpha = 0.2  # Reduced from dual layer approach
+            # Single precise glow layer - more prominent but still controlled
+            glow_alpha = 0.35  # Increased for more prominence while staying controlled
             drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{glow_alpha}:x={x_pos}:y={y_pos}'
             filter_complex.append(f'[null]{drawtext_glow}[glow_txt]')
             
-            # Apply minimal blur to keep glow tight to text edges
-            filter_complex.append('[glow_txt]gblur=sigma=4[glow]')  # Much smaller blur radius
+            # Apply controlled blur to keep glow tight but more visible
+            filter_complex.append('[glow_txt]gblur=sigma=6[glow]')  # Slightly increased for more prominence
             
             # Apply controlled glow over text
             filter_complex.append('[withtext][glow]overlay[final]')
