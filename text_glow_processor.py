@@ -9,16 +9,20 @@ import math
 
 class TextGlowProcessor:
     def __init__(self):
-        # Neon color definitions: single bright core colors for true glow effect
+        # Enhanced neon color palette: intense, electric colors for maximum glow
         self.colors = {
             'white': '#FFFFFF',
             'red': '#FF0033',
-            'blue': '#0066FF', 
+            'blue': '#0099FF',      # Electric blue  
             'yellow': '#FFFF00',
-            'green': '#00FF00',  # Electric green like reference image
+            'green': '#00FF33',     # Brighter electric green
             'purple': '#FF00FF',
             'orange': '#FF6600',
-            'cyan': '#00FFFF'  # Bright aqua/cyan for reference image effect
+            'cyan': '#00FFFF',      # Bright cyan
+            'pink': '#FF0099',      # Hot pink
+            'lime': '#66FF00',      # Electric lime
+            'magenta': '#FF0066',   # Electric magenta
+            'aqua': '#00FF99'       # Electric aqua
         }
     
     def get_font_path(self):
@@ -58,7 +62,7 @@ class TextGlowProcessor:
  
     def process_video(self, input_video, output_video, text, color='white', x=0.5, y=0.7,
                   font_size=None, blur_background=False):
-        """Process video with neon text glow effect (blur only on text)"""
+        """Process video with true neon text glow effect using built-in drawtext parameters"""
 
         neon_color = self.colors.get(color.lower(), self.colors['white'])
         font_path = self.get_font_path()
@@ -67,13 +71,6 @@ class TextGlowProcessor:
         x_pos = f"w*{x}-text_w/2"
         y_pos = f"h*{y}-text_h/2"
         processed_text = text.replace('\\n', '\n')
-
-        # Define glow layers (opacity, blur) - optimized for speed
-        glow_layers = [
-            (0.6, 15),   # outer glow
-            (0.8, 6),    # inner glow  
-            (1.0, None)  # sharp core text
-        ]
 
         try:
             input_stream = ffmpeg.input(input_video)
@@ -89,33 +86,22 @@ class TextGlowProcessor:
                 base = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
                                         .filter('crop', 1080, 1920)
 
-            # --- Split base for each layer to avoid multiple outgoing edges ---
-            streams = [base]
-            for _ in range(len(glow_layers)):
-                split_streams = streams[-1].split()
-                streams[-1] = split_streams[0]
-                streams.append(split_streams[1])
-            # streams[0..n-1] for text layers, streams[-1] is clean base
-
-            out = streams[-1]  # start with clean base
-
-            # Draw glow layers sequentially
-            for i, (opacity, blur) in enumerate(glow_layers):
-                txt = ffmpeg.drawtext(
-                    streams[i],
-                    text=processed_text,
-                    fontfile=font_path,
-                    fontsize=calculated_font_size,
-                    fontcolor=neon_color + f"@{opacity}",
-                    x=x_pos,
-                    y=y_pos,
-                    alpha=1
-                )
-                if blur:
-                    txt = txt.filter('gblur', sigma=blur)
-                out = ffmpeg.overlay(out, txt)
-
-            final = out
+            # Create true neon glow effect using drawtext built-in parameters
+            # This creates a single text with emanating glow from the text edges
+            final = ffmpeg.drawtext(
+                base,
+                text=processed_text,
+                fontfile=font_path,
+                fontsize=calculated_font_size,
+                fontcolor=neon_color,                    # Main text color
+                shadowcolor=neon_color + '@0.8',         # Glow shadow color
+                shadowx=3,                               # Horizontal glow spread
+                shadowy=3,                               # Vertical glow spread  
+                bordercolor=neon_color + '@0.6',        # Border glow
+                borderw=2,                               # Border width for glow
+                x=x_pos,
+                y=y_pos
+            )
 
             # Output with audio - optimized for speed
             output = ffmpeg.output(
@@ -161,7 +147,7 @@ Examples:
     parser.add_argument('text', help='Text to overlay')
     
     parser.add_argument('--color', default='white',
-                       choices=['white', 'red', 'blue', 'yellow', 'green', 'purple', 'orange', 'cyan'],
+                       choices=['white', 'red', 'blue', 'yellow', 'green', 'purple', 'orange', 'cyan', 'pink', 'lime', 'magenta', 'aqua'],
                        help='Text color (default: white)')
     parser.add_argument('--x', type=float, default=0.5,
                        help='Horizontal position 0-1 (default: 0.5)')
