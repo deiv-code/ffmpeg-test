@@ -55,128 +55,92 @@ class TextGlowProcessor:
         print(f"Auto-scaling: \"{text}\" ({len(text)} chars) -> {calculated_size}px (estimated width: {math.floor(calculated_size * len(text) * 0.6)}px)")
         return calculated_size
     
-    def process_video(self, input_video, output_video, text, color='white', x=0.5, y=0.7, 
-                     font_size=None, blur_background=False):
-        """Process video with neon text glow effect"""
-        
-        # Get color value for true neon glow effect
+ 
+    def process_video(self, input_video, output_video, text, color='white', x=0.5, y=0.7,
+                  font_size=None, blur_background=False):
+        """Process video with neon text glow effect (blur only on text)"""
+
         neon_color = self.colors.get(color.lower(), self.colors['white'])
-        
-        # Get font path and calculate size
         font_path = self.get_font_path()
         calculated_font_size = self.calculate_font_size(text, font_size)
-        
-        # Position calculations
+
         x_pos = f"w*{x}-text_w/2"
         y_pos = f"h*{y}-text_h/2"
-        
-        # Support manual line breaks
         processed_text = text.replace('\\n', '\n')
-        
+
+        # Define glow layers (opacity, blur) - optimized for speed
+        glow_layers = [
+            (0.6, 15),   # outer glow
+            (0.8, 6),    # inner glow  
+            (1.0, None)  # sharp core text
+        ]
+
         try:
-            # Input stream
             input_stream = ffmpeg.input(input_video)
-            
-            # Base video processing
+
+            # Prepare base video
             if blur_background:
-                # Create blurred background
-                bg = input_stream.video.filter('scale', 1080, 1920, 
-                                             force_original_aspect_ratio='increase').filter(
-                    'crop', 1080, 1920).filter('gblur', sigma=15)
-                
-                # Create main video
-                main = input_stream.video.filter('scale', 1080, 1920, 
-                                                force_original_aspect_ratio='decrease')
-                
-                # Overlay main on blurred background
-                base = ffmpeg.filter([bg, main], 'overlay', 
-                                   x='(W-w)/2', y='(H-h)/2')
+                bg = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
+                                    .filter('crop', 1080, 1920) \
+                                    .filter('gblur', sigma=15)
+                main = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='decrease')
+                base = ffmpeg.overlay(bg, main, x='(W-w)/2', y='(H-h)/2')
             else:
-                # Simple crop to fit
-                base = input_stream.video.filter('scale', 1080, 1920, 
-                                                force_original_aspect_ratio='increase').filter(
-                    'crop', 1080, 1920)
-            
-            # NEON GLOW: Create smoky, radiating aura effect using blurred text layers
-            final = base  # Start with clean video, never lose it
-            
-            # Layer 1: Widest glow - heavy blur for outer smoky aura (40px blur)
-            final = final.drawtext(
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color + '@0.4',  # 40% opacity for outer glow
-                x=x_pos,
-                y=y_pos
-            ).filter('gblur', sigma=40)
-            
-            # Layer 2: Medium glow - creates the main aura (25px blur)  
-            final = final.drawtext(
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color + '@0.6',  # 60% opacity
-                x=x_pos,
-                y=y_pos
-            ).filter('gblur', sigma=25)
-            
-            # Layer 3: Inner glow - tighter aura (12px blur)
-            final = final.drawtext(
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color + '@0.8',  # 80% opacity
-                x=x_pos,
-                y=y_pos
-            ).filter('gblur', sigma=12)
-            
-            # Layer 4: Core glow - slight blur for smooth transition (4px blur)
-            final = final.drawtext(
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color + '@0.9',  # 90% opacity
-                x=x_pos,
-                y=y_pos
-            ).filter('gblur', sigma=4)
-            
-            # Final layer: Sharp, readable core text (no blur)
-            final = final.drawtext(
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color,  # Full opacity core text
-                x=x_pos,
-                y=y_pos
-            )
-            
-            # Output with audio preservation
+                base = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
+                                        .filter('crop', 1080, 1920)
+
+            # --- Split base for each layer to avoid multiple outgoing edges ---
+            streams = [base]
+            for _ in range(len(glow_layers)):
+                split_streams = streams[-1].split()
+                streams[-1] = split_streams[0]
+                streams.append(split_streams[1])
+            # streams[0..n-1] for text layers, streams[-1] is clean base
+
+            out = streams[-1]  # start with clean base
+
+            # Draw glow layers sequentially
+            for i, (opacity, blur) in enumerate(glow_layers):
+                txt = ffmpeg.drawtext(
+                    streams[i],
+                    text=processed_text,
+                    fontfile=font_path,
+                    fontsize=calculated_font_size,
+                    fontcolor=neon_color + f"@{opacity}",
+                    x=x_pos,
+                    y=y_pos,
+                    alpha=1
+                )
+                if blur:
+                    txt = txt.filter('gblur', sigma=blur)
+                out = ffmpeg.overlay(out, txt)
+
+            final = out
+
+            # Output with audio - optimized for speed
             output = ffmpeg.output(
                 final,
                 input_stream.audio,
                 output_video,
                 vcodec='libx264',
-                preset='medium',
-                crf=20,  # Always use high quality
+                preset='fast',      # faster encoding
+                crf=23,            # slightly lower quality for speed
                 acodec='aac',
                 audio_bitrate='128k'
-            )
-            
-            output = output.global_args('-movflags', '+faststart')
-            
-            # Overwrite output file
-            output = output.overwrite_output()
-            
+            ).global_args('-movflags', '+faststart').overwrite_output()
+
             print('Running FFmpeg...')
             ffmpeg.run(output, quiet=False)
             print('Video processing completed successfully!')
-            
+
         except ffmpeg.Error as e:
             print(f"FFmpeg failed: {e}")
             raise
         except Exception as e:
             print(f"Processing failed: {e}")
             raise
+
+
 
 
 def main():

@@ -37,7 +37,8 @@
       "Read(/C:\\Users\\david\\desktop\\ffmpeg-test/**)",
       "Read(/C:\\Users\\david\\desktop\\ffmpeg-test/**)",
       "Read(/C:\\Users\\david\\desktop\\ffmpeg-test/**)",
-      "Read(/C:\\Users\\david\\desktop\\ffmpeg-test/**)"
+      "Read(/C:\\Users\\david\\desktop\\ffmpeg-test/**)",
+      "Bash(time python3:*)"
     ],
     "deny": [],
     "ask": []
