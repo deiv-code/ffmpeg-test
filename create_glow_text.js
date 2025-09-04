@@ -96,31 +96,15 @@ class TextGlowProcessor {
             `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920[base]`
         ];
 
-        // Generate glow layers dynamically
-        const glowLayers = enhanced ? 
-            [
-                { color: glow, opacity: 0.3, border: 20, borderOpacity: 0.2 },
-                { color: glow, opacity: 0.5, border: 15, borderOpacity: 0.3 },
-                { color: bright, opacity: 0.7, border: 10, borderOpacity: 0.5 },
-                { color: bright, opacity: 0.85, border: 6, borderOpacity: 0.7 },
-                { color: core, opacity: 0.95, border: 3, borderOpacity: 0.9 }
-            ] : [
-                { color: glow, opacity: 0.4, border: 15, borderOpacity: 0.25 },
-                { color: glow, opacity: 0.6, border: 10, borderOpacity: 0.4 },
-                { color: bright, opacity: 0.8, border: 6, borderOpacity: 0.6 },
-                { color: bright, opacity: 0.9, border: 3, borderOpacity: 0.8 }
-            ];
-
-        let currentLayer = 'base';
-        glowLayers.forEach((layer, i) => {
-            const nextLayer = `glow${i + 1}`;
-            filters.push(`[${currentLayer}]${this.buildDrawText(text, fontPath, fontSizeCalc, layer.color, layer.opacity, xPos, yPos, layer.border, `${layer.color}@${layer.borderOpacity}`)}[${nextLayer}]`);
-            currentLayer = nextLayer;
-        });
-
-        // Final bright text (no shadows)
-        const finalBorder = enhanced ? `${bright}@0.8` : `${bright}@0.5`;
-        filters.push(`[${currentLayer}]${this.buildDrawText(text, fontPath, fontSizeCalc, core, 1.0, xPos, yPos, 1, finalBorder)}[final]`);
+        // Simple 2-layer glow approach
+        const glowSize = enhanced ? 12 : 8;
+        const glowIntensity = enhanced ? 0.6 : 0.4;
+        
+        // Layer 1: Create glow effect (larger blurred text)
+        filters.push(`[base]${this.buildDrawText(text, fontPath, fontSizeCalc, glow, glowIntensity, xPos, yPos, glowSize, glow)}[glow_layer]`);
+        
+        // Layer 2: Sharp text on top
+        filters.push(`[glow_layer]${this.buildDrawText(text, fontPath, fontSizeCalc, core, 1.0, xPos, yPos)}[final]`);
 
         const ffmpegArgs = [
             '-i', inputVideo,
