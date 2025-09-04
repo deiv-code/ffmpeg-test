@@ -85,30 +85,32 @@ class TextGlowProcessor:
                 base = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
                                         .filter('crop', 1080, 1920)
 
-            # Create transparent background for text-only glow
-            transparent = ffmpeg.input('color=black@0.0:size=1080x1920:duration=30', f='lavfi')
+            # Use simple multiple drawtext approach for reliable glow effect
+            # Add multiple layers of text with different alpha values to simulate glow
+            current = base
             
-            # Draw semi-transparent text on transparent background
-            glow_alpha = 0.7
-            text_glow = ffmpeg.drawtext(
-                transparent,
-                text=processed_text,
-                fontfile=font_path,
-                fontsize=calculated_font_size,
-                fontcolor=neon_color + f'@{glow_alpha}',
-                x=x_pos,
-                y=y_pos
-            )
+            # Create glow layers with decreasing opacity (outermost to innermost)
+            glow_layers = [
+                {'alpha': 0.3, 'description': 'Outer glow'},
+                {'alpha': 0.5, 'description': 'Medium glow'}, 
+                {'alpha': 0.7, 'description': 'Inner glow'}
+            ]
             
-            # Apply blur only to the text layer to create glow
-            glow_blurred = text_glow.filter('gblur', sigma=15)
-            
-            # Overlay the blurred text glow onto the video
-            with_glow = ffmpeg.overlay(base, glow_blurred)
+            # Add each glow layer
+            for layer in glow_layers:
+                current = ffmpeg.drawtext(
+                    current,
+                    text=processed_text,
+                    fontfile=font_path,
+                    fontsize=calculated_font_size + 4,  # Slightly larger for glow effect
+                    fontcolor=neon_color + f'@{layer["alpha"]}',
+                    x=x_pos,
+                    y=y_pos
+                )
             
             # Add final sharp text on top
             final = ffmpeg.drawtext(
-                with_glow,
+                current,
                 text=processed_text,
                 fontfile=font_path,
                 fontsize=calculated_font_size,
