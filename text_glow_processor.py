@@ -104,13 +104,13 @@ class TextGlowProcessor:
             # Create transparent background for text-only glow
             filter_complex.append('nullsrc=size=1080x1920:duration=30[null]')
             
-            # Draw semi-transparent text on transparent background
-            glow_alpha = 0.7
+            # Draw semi-transparent text on transparent background for glow
+            glow_alpha = 0.4  # Reduced opacity for subtle glow
             drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{glow_alpha}:x={x_pos}:y={y_pos}'
             filter_complex.append(f'[null]{drawtext_glow}[txt]')
             
             # Apply blur to create authentic glow
-            filter_complex.append('[txt]gblur=sigma=15[glow]')
+            filter_complex.append('[txt]gblur=sigma=10[glow]')
             
             # Overlay blurred glow onto base video  
             filter_complex.append('[base][glow]overlay[withglow]')
