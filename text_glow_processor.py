@@ -56,7 +56,7 @@ class TextGlowProcessor:
         return calculated_size
     
     def process_video(self, input_video, output_video, text, color='white', x=0.5, y=0.7, 
-                     font_size=None, enhanced=True, blur_background=False):
+                     font_size=None, blur_background=False):
         """Process video with neon text glow effect"""
         
         # Get color value for true neon glow effect
@@ -82,7 +82,7 @@ class TextGlowProcessor:
                 # Create blurred background
                 bg = input_stream.video.filter('scale', 1080, 1920, 
                                              force_original_aspect_ratio='increase').filter(
-                    'crop', 1080, 1920).filter('gblur', sigma=15 if enhanced else 10)
+                    'crop', 1080, 1920).filter('gblur', sigma=15)
                 
                 # Create main video
                 main = input_stream.video.filter('scale', 1080, 1920, 
@@ -97,117 +97,58 @@ class TextGlowProcessor:
                                                 force_original_aspect_ratio='increase').filter(
                     'crop', 1080, 1920)
             
-            # PROPER NEON GLOW: Multi-pass drawtext with shadow effects
-            # Keep base video visible throughout - no overlays, no black backgrounds
-            final = base  # Start with clean video and never lose it
+            # NEON GLOW: Create smoky, radiating aura effect using blurred text layers
+            final = base  # Start with clean video, never lose it
             
-            if enhanced:
-                # Enhanced mode: Multiple shadow passes for realistic glow
-                # Layer 1: Widest glow using shadow effect
-                final = final.drawtext(
-                    text=processed_text,
-                    fontfile=font_path,
-                    fontsize=calculated_font_size,
-                    fontcolor='black@0.0',  # Invisible text
-                    shadowcolor=neon_color + '@0.3',  # 30% opacity shadow
-                    shadowx=0, shadowy=0,  # Centered shadow for glow effect
-                    x=x_pos,
-                    y=y_pos
-                )
-                
-                # Layer 2: Large glow
-                final = final.drawtext(
-                    text=processed_text,
-                    fontfile=font_path,
-                    fontsize=calculated_font_size,
-                    fontcolor='black@0.0',  # Invisible text  
-                    shadowcolor=neon_color + '@0.4',  # 40% opacity
-                    shadowx=0, shadowy=0,
-                    x=x_pos,
-                    y=y_pos
-                )
-                
-                # Layer 3: Medium glow
-                final = final.drawtext(
-                    text=processed_text,
-                    fontfile=font_path,
-                    fontsize=calculated_font_size,
-                    fontcolor='black@0.0',  # Invisible text
-                    shadowcolor=neon_color + '@0.5',  # 50% opacity
-                    shadowx=0, shadowy=0,
-                    x=x_pos,
-                    y=y_pos
-                )
-                
-                # Layer 4: Inner glow  
-                final = final.drawtext(
-                    text=processed_text,
-                    fontfile=font_path,
-                    fontsize=calculated_font_size,
-                    fontcolor='black@0.0',  # Invisible text
-                    shadowcolor=neon_color + '@0.7',  # 70% opacity
-                    shadowx=0, shadowy=0,
-                    x=x_pos,
-                    y=y_pos
-                )
-                
-                # Layer 5: Core glow
-                final = final.drawtext(
-                    text=processed_text,
-                    fontfile=font_path,
-                    fontsize=calculated_font_size,
-                    fontcolor='black@0.0',  # Invisible text
-                    shadowcolor=neon_color + '@0.9',  # 90% opacity
-                    shadowx=0, shadowy=0,
-                    x=x_pos,
-                    y=y_pos
-                )
-                
-                # Final layer: Sharp, readable core text
-                final = final.drawtext(
-                    text=processed_text,
-                    fontfile=font_path,
-                    fontsize=calculated_font_size,
-                    fontcolor=neon_color,  # Full opacity readable text
-                    x=x_pos,
-                    y=y_pos
-                )
-                
-            else:
-                # Standard mode: Simpler 2-shadow glow
-                # Outer glow shadow
-                final = final.drawtext(
-                    text=processed_text,
-                    fontfile=font_path,
-                    fontsize=calculated_font_size,
-                    fontcolor='black@0.0',  # Invisible text
-                    shadowcolor=neon_color + '@0.4',  # 40% opacity outer glow
-                    shadowx=0, shadowy=0,
-                    x=x_pos,
-                    y=y_pos
-                )
-                
-                # Inner glow shadow
-                final = final.drawtext(
-                    text=processed_text,
-                    fontfile=font_path,
-                    fontsize=calculated_font_size,
-                    fontcolor='black@0.0',  # Invisible text
-                    shadowcolor=neon_color + '@0.7',  # 70% opacity inner glow
-                    shadowx=0, shadowy=0,
-                    x=x_pos,
-                    y=y_pos
-                )
-                
-                # Core readable text
-                final = final.drawtext(
-                    text=processed_text,
-                    fontfile=font_path,
-                    fontsize=calculated_font_size,
-                    fontcolor=neon_color,  # Full opacity readable text
-                    x=x_pos,
-                    y=y_pos
-                )
+            # Layer 1: Widest glow - heavy blur for outer smoky aura (40px blur)
+            final = final.drawtext(
+                text=processed_text,
+                fontfile=font_path,
+                fontsize=calculated_font_size,
+                fontcolor=neon_color + '@0.4',  # 40% opacity for outer glow
+                x=x_pos,
+                y=y_pos
+            ).filter('gblur', sigma=40)
+            
+            # Layer 2: Medium glow - creates the main aura (25px blur)  
+            final = final.drawtext(
+                text=processed_text,
+                fontfile=font_path,
+                fontsize=calculated_font_size,
+                fontcolor=neon_color + '@0.6',  # 60% opacity
+                x=x_pos,
+                y=y_pos
+            ).filter('gblur', sigma=25)
+            
+            # Layer 3: Inner glow - tighter aura (12px blur)
+            final = final.drawtext(
+                text=processed_text,
+                fontfile=font_path,
+                fontsize=calculated_font_size,
+                fontcolor=neon_color + '@0.8',  # 80% opacity
+                x=x_pos,
+                y=y_pos
+            ).filter('gblur', sigma=12)
+            
+            # Layer 4: Core glow - slight blur for smooth transition (4px blur)
+            final = final.drawtext(
+                text=processed_text,
+                fontfile=font_path,
+                fontsize=calculated_font_size,
+                fontcolor=neon_color + '@0.9',  # 90% opacity
+                x=x_pos,
+                y=y_pos
+            ).filter('gblur', sigma=4)
+            
+            # Final layer: Sharp, readable core text (no blur)
+            final = final.drawtext(
+                text=processed_text,
+                fontfile=font_path,
+                fontsize=calculated_font_size,
+                fontcolor=neon_color,  # Full opacity core text
+                x=x_pos,
+                y=y_pos
+            )
             
             # Output with audio preservation
             output = ffmpeg.output(
@@ -216,13 +157,12 @@ class TextGlowProcessor:
                 output_video,
                 vcodec='libx264',
                 preset='medium',
-                crf=20 if enhanced else 23,
+                crf=20,  # Always use high quality
                 acodec='aac',
                 audio_bitrate='128k'
             )
             
-            if enhanced:
-                output = output.global_args('-movflags', '+faststart')
+            output = output.global_args('-movflags', '+faststart')
             
             # Overwrite output file
             output = output.overwrite_output()
@@ -264,8 +204,6 @@ Examples:
     parser.add_argument('--y', type=float, default=0.7,
                        help='Vertical position 0-1 (default: 0.7)')
     parser.add_argument('--size', type=int, help='Font size in pixels (default: auto)')
-    parser.add_argument('--enhanced', action='store_true',
-                       help='Use enhanced glow effect')
     parser.add_argument('--no-blur-background', action='store_true',
                        help='Use simple crop to fit (default: blurred background with centered video)')
     
@@ -291,7 +229,6 @@ Examples:
             x=args.x,
             y=args.y,
             font_size=args.size,
-            enhanced=args.enhanced,
             blur_background=not args.no_blur_background
         )
         print(f"Output: {args.output_video}")
