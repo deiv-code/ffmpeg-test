@@ -122,8 +122,8 @@ class TextGlowProcessor:
             # Apply blur to create glow effect (increased blur for more diffuse glow)
             filter_complex.append('[glow_txt]gblur=sigma=2.0[glow]')
             
-            # Apply glow to base video using blend method (increased opacity for more visible effect)
-            filter_complex.append('[base][glow]blend=all_mode=screen:all_opacity=0.4[with_glow_bg]')
+            # Apply glow to base video using blend method (much higher opacity to match text color intensity)
+            filter_complex.append('[base][glow]blend=all_mode=screen:all_opacity=0.2[with_glow_bg]')
             
             # Skip post-blur (fixed: disabled)
             
