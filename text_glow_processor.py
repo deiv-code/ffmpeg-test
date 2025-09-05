@@ -120,7 +120,7 @@ class TextGlowProcessor:
             filter_complex.append(f'[null]{drawtext_glow}[glow_txt]')
 
             # Apply blur to create glow effect (increased blur for more diffuse glow)
-            filter_complex.append('[glow_txt]gblur=sigma=2.0[glow]')
+            filter_complex.append('[glow_txt]gblur=sigma=3.0[glow]')
             
             # Apply glow to base video using direct overlay (preserves exact colors)
             filter_complex.append('[base][glow]overlay[with_glow_bg]')
@@ -184,9 +184,9 @@ Examples:
                        choices=['white', 'red', 'blue', 'yellow', 'green', 'purple', 'orange', 'cyan', 'pink', 'lime', 'magenta', 'aqua'],
                        help='Text color (default: yellow)')
 
-    parser.add_argument('--glow-alpha', type=float, default=0.25, metavar='0.0-1.0',
-                       help='Glow transparency/intensity (0.0-1.0, default: 0.3)')
-    
+    parser.add_argument('--glow-alpha', type=float, default=0.8, metavar='0.0-1.0',
+                       help='Glow transparency/intensity (0.0-1.0, default: 0.8)')
+
     args = parser.parse_args()
     
     processor = TextGlowProcessor()
