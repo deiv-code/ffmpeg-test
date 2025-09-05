@@ -60,7 +60,7 @@ class TextGlowProcessor:
         return calculated_size
  
     def process_video(self, input_video, output_video, text, color='white', x=0.5, y=0.7,
-                                font_size=None, blur_background=False):
+                                font_size=None, blur_background=False, glow_opacity=0.3, glow_blur=3.0):
         """Process video using clean split/blur/overlay approach for text-only glow"""
         
         neon_color = self.colors.get(color.lower(), self.colors['white'])
@@ -114,12 +114,11 @@ class TextGlowProcessor:
             filter_complex.append(f'nullsrc=size=1080x1920:duration={duration}[null]')
             
             # Create subtle glow layer that text will sit on top of
-            glow_alpha = 0.3  # Slightly increased to maintain visibility with tighter blur
-            drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{glow_alpha}:x={x_pos}:y={y_pos}'
+            drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{glow_opacity}:x={x_pos}:y={y_pos}'
             filter_complex.append(f'[null]{drawtext_glow}[glow_txt]')
             
-            # Apply tight blur to keep glow close to text edges
-            filter_complex.append('[glow_txt]gblur=sigma=3[glow]')  # Much tighter blur for subtle edge glow
+            # Apply blur to create glow effect
+            filter_complex.append(f'[glow_txt]gblur=sigma={glow_blur}[glow]')
             
             # Apply glow to base video first
             filter_complex.append('[base][glow]overlay[with_glow_bg]')
@@ -181,6 +180,10 @@ Examples:
     parser.add_argument('--y', type=float, default=0.7,
                        help='Vertical position 0-1 (default: 0.7)')
     parser.add_argument('--size', type=int, help='Font size in pixels (default: auto)')
+    parser.add_argument('--glow-opacity', type=float, default=0.3,
+                       help='Glow opacity 0-1 (default: 0.3)')
+    parser.add_argument('--glow-blur', type=float, default=3.0,
+                       help='Glow blur sigma (default: 3.0)')
     parser.add_argument('--no-blur-background', action='store_true',
                        help='Use simple crop to fit (default: blurred background with centered video)')
     
@@ -192,6 +195,14 @@ Examples:
         sys.exit(1)
     if not (0 <= args.y <= 1):
         print("Error: --y must be between 0 and 1")
+        sys.exit(1)
+    
+    # Validate glow arguments
+    if not (0 <= args.glow_opacity <= 1):
+        print("Error: --glow-opacity must be between 0 and 1")
+        sys.exit(1)
+    if args.glow_blur < 0:
+        print("Error: --glow-blur must be >= 0")
         sys.exit(1)
     
     processor = TextGlowProcessor()
@@ -206,7 +217,9 @@ Examples:
             x=args.x,
             y=args.y,
             font_size=args.size,
-            blur_background=not args.no_blur_background
+            blur_background=not args.no_blur_background,
+            glow_opacity=args.glow_opacity,
+            glow_blur=args.glow_blur
         )
         print(f"Output: {args.output_video}")
         

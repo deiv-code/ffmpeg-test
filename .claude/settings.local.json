@@ -39,7 +39,8 @@
       "Read(/C:\\Users\\david\\desktop\\ffmpeg-test/**)",
       "Read(/C:\\Users\\david\\desktop\\ffmpeg-test/**)",
       "Bash(time python3:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(./node_modules/ffmpeg-static/ffmpeg.exe -f lavfi -i \"testsrc2=duration=5:size=1080x1920:rate=30\" -c:v libx264 -y test_input_glow.mp4)"
     ],
     "deny": [],
     "ask": []
