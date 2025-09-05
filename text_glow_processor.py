@@ -59,7 +59,7 @@ class TextGlowProcessor:
         print(f"Auto-scaling: \"{text}\" ({len(text)} chars) -> {calculated_size}px (estimated width: {math.floor(calculated_size * len(text) * 0.6)}px)")
         return calculated_size
  
-    def process_video(self, input_video, output_video, text, color='yellow'):
+    def process_video(self, input_video, output_video, text, color='yellow', glow_alpha=0.2):
         """Process video using blend-based approach for enhanced text glow effects"""
         
         neon_color = self.colors.get(color.lower(), self.colors['yellow'])
@@ -115,15 +115,15 @@ class TextGlowProcessor:
             # Create integrated glow effect - glow first, then sharp text over it
             filter_complex.append(f'nullsrc=size=1080x1920:duration={duration}[null]')
             
-            # Create glow layer with full opacity (blend controls final opacity)
-            drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={glow_neon_color}:x={x_pos}:y={y_pos}'
+            # Create glow layer with alpha transparency for exact color matching
+            drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={glow_neon_color}@{glow_alpha}:x={x_pos}:y={y_pos}'
             filter_complex.append(f'[null]{drawtext_glow}[glow_txt]')
 
             # Apply blur to create glow effect (increased blur for more diffuse glow)
             filter_complex.append('[glow_txt]gblur=sigma=2.0[glow]')
             
-            # Apply glow to base video using blend method (much higher opacity to match text color intensity)
-            filter_complex.append('[base][glow]blend=all_mode=screen:all_opacity=0.2[with_glow_bg]')
+            # Apply glow to base video using direct overlay (preserves exact colors)
+            filter_complex.append('[base][glow]overlay[with_glow_bg]')
             
             # Skip post-blur (fixed: disabled)
             
@@ -183,6 +183,9 @@ Examples:
     parser.add_argument('--color', default='yellow',
                        choices=['white', 'red', 'blue', 'yellow', 'green', 'purple', 'orange', 'cyan', 'pink', 'lime', 'magenta', 'aqua'],
                        help='Text color (default: yellow)')
+
+    parser.add_argument('--glow-alpha', type=float, default=0.25, metavar='0.0-1.0',
+                       help='Glow transparency/intensity (0.0-1.0, default: 0.3)')
     
     args = parser.parse_args()
     
@@ -194,7 +197,8 @@ Examples:
             args.input_video,
             args.output_video,
             args.text,
-            color=args.color
+            color=args.color,
+            glow_alpha=getattr(args, 'glow_alpha', 0.2)
         )
         print(f"Output: {args.output_video}")
         
