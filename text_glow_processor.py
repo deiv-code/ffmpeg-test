@@ -118,12 +118,12 @@ class TextGlowProcessor:
             # Create glow layer with full opacity (blend controls final opacity)
             drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={glow_neon_color}:x={x_pos}:y={y_pos}'
             filter_complex.append(f'[null]{drawtext_glow}[glow_txt]')
+
+            # Apply blur to create glow effect (increased blur for more diffuse glow)
+            filter_complex.append('[glow_txt]gblur=sigma=2.0[glow]')
             
-            # Apply blur to create glow effect (fixed: 4.0 sigma)
-            filter_complex.append('[glow_txt]gblur=sigma=4.0[glow]')
-            
-            # Apply glow to base video using blend method (fixed: screen mode, 0.2 opacity)
-            filter_complex.append('[base][glow]blend=all_mode=screen:all_opacity=0.2[with_glow_bg]')
+            # Apply glow to base video using blend method (increased opacity for more visible effect)
+            filter_complex.append('[base][glow]blend=all_mode=screen:all_opacity=0.4[with_glow_bg]')
             
             # Skip post-blur (fixed: disabled)
             
