@@ -71,6 +71,15 @@ class TextGlowProcessor:
         y_pos = f"h*{y}-text_h/2"
         processed_text = text.replace('\\n', '\n').replace("'", r"\'")
 
+        # Get input video duration for dynamic glow duration
+        try:
+            probe = ffmpeg.probe(input_video)
+            duration = float(probe['streams'][0]['duration'])
+            print(f"Detected video duration: {duration:.2f} seconds")
+        except (KeyError, ValueError, Exception) as e:
+            print(f"Could not detect duration ({e}), using fallback of 60 seconds")
+            duration = 60  # Fallback duration
+
         try:
             input_stream = ffmpeg.input(input_video)
 
@@ -102,7 +111,7 @@ class TextGlowProcessor:
                 filter_complex.append('[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920[base]')
             
             # Create integrated glow effect - glow first, then sharp text over it
-            filter_complex.append('nullsrc=size=1080x1920:duration=30[null]')
+            filter_complex.append(f'nullsrc=size=1080x1920:duration={duration}[null]')
             
             # Create subtle glow layer that text will sit on top of
             glow_alpha = 0.3  # Slightly increased to maintain visibility with tighter blur
