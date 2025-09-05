@@ -59,16 +59,25 @@ class TextGlowProcessor:
         print(f"Auto-scaling: \"{text}\" ({len(text)} chars) -> {calculated_size}px (estimated width: {math.floor(calculated_size * len(text) * 0.6)}px)")
         return calculated_size
  
-    def process_video(self, input_video, output_video, text, color='white', x=0.5, y=0.7,
-                                font_size=None, blur_background=False, glow_opacity=0.2, glow_blur=4.0, blend_mode='screen'):
+    def process_video(self, input_video, output_video, text, color='yellow'):
         """Process video using blend-based approach for enhanced text glow effects"""
         
-        neon_color = self.colors.get(color.lower(), self.colors['white'])
+        neon_color = self.colors.get(color.lower(), self.colors['yellow'])
+        # Fixed settings
+        glow_neon_color = neon_color  # Glow same color as text
         font_path = self.get_font_path()
-        calculated_font_size = self.calculate_font_size(text, font_size)
-
+        calculated_font_size = self.calculate_font_size(text, None)
+        
+        # Fixed position settings
+        x = 0.5
+        y = 0.7
+        shadow_offset = 3
+        
         x_pos = f"w*{x}-text_w/2"
         y_pos = f"h*{y}-text_h/2"
+        # Shadow position (offset to the right)
+        shadow_x_pos = f"w*{x}-text_w/2+{shadow_offset}"
+        shadow_y_pos = f"h*{y}-text_h/2+{shadow_offset}"
         processed_text = text.replace('\\n', '\n').replace("'", r"\'")
 
         # Get input video duration for dynamic glow duration
@@ -83,49 +92,48 @@ class TextGlowProcessor:
         try:
             input_stream = ffmpeg.input(input_video)
 
-            # Prepare base video
-            if blur_background:
-                bg = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
-                                    .filter('crop', 1080, 1920) \
-                                    .filter('gblur', sigma=15)
-                main = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='decrease')
-                base = ffmpeg.overlay(bg, main, x='(W-w)/2', y='(H-h)/2')
-            else:
-                base = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
-                                        .filter('crop', 1080, 1920)
+            # Fixed: Use blurred background
+            bg = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='increase') \
+                                .filter('crop', 1080, 1920) \
+                                .filter('gblur', sigma=15)
+            main = input_stream.video.filter('scale', 1080, 1920, force_original_aspect_ratio='decrease')
+            base = ffmpeg.overlay(bg, main, x='(W-w)/2', y='(H-h)/2')
 
             # Use raw filter_complex approach to replicate Node.js glow effect exactly
             # This ensures proper filter graph construction for blur-based glow
             
-            # Prepare filter complex chain (same as working Node.js version)
+            # Fixed filter complex chain with optimal settings
             filter_complex = []
             
-            # Scale and crop base video
-            if blur_background:
-                filter_complex.extend([
-                    '[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,gblur=sigma=15[bg]',
-                    '[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[main]',
-                    '[bg][main]overlay=(W-w)/2:(H-h)/2[base]'
-                ])
-            else:
-                filter_complex.append('[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920[base]')
+            # Scale and crop base video with blurred background
+            filter_complex.extend([
+                '[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,gblur=sigma=15[bg]',
+                '[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[main]',
+                '[bg][main]overlay=(W-w)/2:(H-h)/2[base]'
+            ])
             
             # Create integrated glow effect - glow first, then sharp text over it
             filter_complex.append(f'nullsrc=size=1080x1920:duration={duration}[null]')
             
             # Create glow layer with full opacity (blend controls final opacity)
-            drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}:x={x_pos}:y={y_pos}'
+            drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={glow_neon_color}:x={x_pos}:y={y_pos}'
             filter_complex.append(f'[null]{drawtext_glow}[glow_txt]')
             
-            # Apply blur to create glow effect
-            filter_complex.append(f'[glow_txt]gblur=sigma={glow_blur}[glow]')
+            # Apply blur to create glow effect (fixed: 4.0 sigma)
+            filter_complex.append('[glow_txt]gblur=sigma=4.0[glow]')
             
-            # Apply glow to base video using blend method with controlled opacity
-            filter_complex.append(f'[base][glow]blend=all_mode={blend_mode}:all_opacity={glow_opacity}[with_glow_bg]')
+            # Apply glow to base video using blend method (fixed: screen mode, 0.2 opacity)
+            filter_complex.append('[base][glow]blend=all_mode=screen:all_opacity=0.2[with_glow_bg]')
             
-            # Now add sharp, bright text over the glow for integrated effect
+            # Skip post-blur (fixed: disabled)
+            
+            # Add shadow layer (fixed: 0.6 opacity)
+            drawtext_shadow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor=black@0.6:x={shadow_x_pos}:y={shadow_y_pos}'
+            filter_complex.append(f'[with_glow_bg]{drawtext_shadow}[with_shadow]')
+            
+            # Now add sharp, bright text over the shadow and glow for integrated effect
             drawtext_final = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}:x={x_pos}:y={y_pos}'
-            filter_complex.append(f'[with_glow_bg]{drawtext_final}[final]')
+            filter_complex.append(f'[with_shadow]{drawtext_final}[final]')
             
             # Create output with raw filter_complex
             output = ffmpeg.output(
@@ -162,9 +170,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python text_glow_processor.py input.mp4 output.mp4 "GOAL!" --color red --y 0.8
-  python text_glow_processor.py video.mov result.mp4 "NEWS" --color blue --advanced
-  python text_glow_processor.py clip.avi output.mp4 "EPIC WIN" --color yellow --x 0.3 --y 0.4
+  python text_glow_processor.py input.mp4 output.mp4 "ARE YOU OK?"
+  python text_glow_processor.py video.mov result.mp4 "NEWS" --color blue  
+  python text_glow_processor.py clip.avi output.mp4 "EPIC WIN" --color red
         """
     )
     
@@ -172,41 +180,11 @@ Examples:
     parser.add_argument('output_video', help='Output video file')
     parser.add_argument('text', help='Text to overlay')
     
-    parser.add_argument('--color', default='white',
+    parser.add_argument('--color', default='yellow',
                        choices=['white', 'red', 'blue', 'yellow', 'green', 'purple', 'orange', 'cyan', 'pink', 'lime', 'magenta', 'aqua'],
-                       help='Text color (default: white)')
-    parser.add_argument('--x', type=float, default=0.5,
-                       help='Horizontal position 0-1 (default: 0.5)')
-    parser.add_argument('--y', type=float, default=0.7,
-                       help='Vertical position 0-1 (default: 0.7)')
-    parser.add_argument('--size', type=int, help='Font size in pixels (default: auto)')
-    parser.add_argument('--glow-opacity', type=float, default=0.2,
-                       help='Glow opacity 0-1 (default: 0.2)')
-    parser.add_argument('--glow-blur', type=float, default=4.0,
-                       help='Glow blur sigma (default: 4.0)')
-    parser.add_argument('--blend-mode', default='screen',
-                       choices=['screen', 'overlay', 'multiply', 'addition', 'lighten', 'darken', 'softlight', 'hardlight'],
-                       help='Glow blend mode (default: screen)')
-    parser.add_argument('--no-blur-background', action='store_true',
-                       help='Use simple crop to fit (default: blurred background with centered video)')
+                       help='Text color (default: yellow)')
     
     args = parser.parse_args()
-    
-    # Validate position arguments
-    if not (0 <= args.x <= 1):
-        print("Error: --x must be between 0 and 1")
-        sys.exit(1)
-    if not (0 <= args.y <= 1):
-        print("Error: --y must be between 0 and 1")
-        sys.exit(1)
-    
-    # Validate glow arguments
-    if not (0 <= args.glow_opacity <= 1):
-        print("Error: --glow-opacity must be between 0 and 1")
-        sys.exit(1)
-    if args.glow_blur < 0:
-        print("Error: --glow-blur must be >= 0")
-        sys.exit(1)
     
     processor = TextGlowProcessor()
     print(f"Processing: {args.text} ({args.color})")
@@ -216,14 +194,7 @@ Examples:
             args.input_video,
             args.output_video,
             args.text,
-            color=args.color,
-            x=args.x,
-            y=args.y,
-            font_size=args.size,
-            blur_background=not args.no_blur_background,
-            glow_opacity=args.glow_opacity,
-            glow_blur=args.glow_blur,
-            blend_mode=args.blend_mode
+            color=args.color
         )
         print(f"Output: {args.output_video}")
         
