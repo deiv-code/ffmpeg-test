@@ -8,9 +8,42 @@ Create YouTube Shorts-style videos with professional neon text glow effects usin
 # Install dependencies
 pip install ffmpeg-python
 
-# Basic usage
+# Basic usage with default settings
 python text_glow_processor.py input.mp4 output.mp4 "YOUR TEXT" --color cyan
+
+# With custom glow intensity
+python text_glow_processor.py input.mp4 output.mp4 "YOUR TEXT" --color cyan --glow-alpha 0.5
 ```
+
+## Step-by-Step Usage Guide
+
+### 1. Prepare Your Video
+- Any video format (MP4, MOV, AVI, WebM, etc.)
+- Vertical videos work best but horizontal will be cropped to 9:16
+- Audio is automatically preserved
+
+### 2. Choose Your Text and Style
+```bash
+# Basic command structure
+python text_glow_processor.py [input_video] [output_video] "[your_text]" --color [color] --glow-alpha [0.0-1.0]
+```
+
+### 3. Select Color and Glow Intensity
+- **Colors available**: white, red, blue, yellow, green, purple, orange, cyan, pink, lime, magenta, aqua
+- **Glow intensity**: 0.0 (no glow) to 1.0 (maximum glow), default is 0.4
+
+### 4. Run and Check Output
+```bash
+# Example process
+python text_glow_processor.py my_video.mp4 output.mp4 "AMAZING!" --color cyan --glow-alpha 0.6
+```
+
+The script will:
+- Auto-detect video duration
+- Scale text to fit screen width
+- Apply blur-based glow effect
+- Add shadow for depth
+- Output 1080x1920 MP4 ready for social media
 
 ## Installation
 
@@ -40,27 +73,40 @@ python text_glow_processor.py <input_video> <output_video> <text> [options]
 
 | Option | Description | Values | Default |
 |--------|-------------|--------|---------|
-| `--color` | Text and glow color | white, red, blue, yellow, green, purple, orange, cyan, pink, lime, magenta, aqua | white |
-| `--x` | Horizontal position | 0.0-1.0 (0=left, 1=right) | 0.5 |
-| `--y` | Vertical position | 0.0-1.0 (0=top, 1=bottom) | 0.7 |
-| `--size` | Font size in pixels | Any integer | Auto-calculated |
-| `--no-blur-background` | Use simple crop instead of blurred background | Flag | false |
+| `--color` | Text and glow color | white, red, blue, yellow, green, purple, orange, cyan, pink, lime, magenta, aqua | yellow |
+| `--glow-alpha` | Glow intensity/transparency | 0.0-1.0 (0.0=no glow, 1.0=maximum glow) | 0.4 |
 
 ## Examples
 
+## Current Implementation Approach
+
+The text glow processor uses a **multi-layer composition approach** for authentic neon glow effects:
+
+1. **Base Video Processing**: Input video is scaled and cropped to 1080x1920 (9:16) with a blurred background
+2. **Glow Layer Creation**: Semi-transparent text is rendered and blurred to create the glow effect
+3. **Shadow Layer**: Black shadow text provides depth and contrast
+4. **Sharp Text Overlay**: Final bright text is overlaid for crisp readability
+
+### Key Features of Current Implementation
+- **Fixed positioning**: Text appears at 70% down the screen (optimized for YouTube Shorts)
+- **Auto-scaling**: Font size automatically adjusts based on text length
+- **Color-matched glow**: Glow color perfectly matches text color
+- **Blur-based glow**: Uses Gaussian blur (sigma=3.0) for realistic neon lighting
+- **Multi-layer depth**: Shadow + glow + sharp text for maximum visual impact
+
 ### Basic Examples
 ```bash
-# Cyan neon glow (default position)
-python text_glow_processor.py input.mp4 output.mp4 "NEON GLOW" --color cyan
+# Default yellow neon glow
+python text_glow_processor.py input.mp4 output.mp4 "NEON GLOW"
 
-# Red text at bottom with larger font
-python text_glow_processor.py video.mp4 result.mp4 "GOAL!" --color red --y 0.8 --size 100
+# Cyan glow with default intensity
+python text_glow_processor.py video.mp4 result.mp4 "GOAL!" --color cyan
 
-# Green text centered on screen
-python text_glow_processor.py clip.mp4 output.mp4 "CENTER" --color green --x 0.5 --y 0.5
+# Red text with subtle glow
+python text_glow_processor.py clip.mp4 output.mp4 "WINNER" --color red --glow-alpha 0.3
 
-# Purple text with simple crop (no background blur)
-python text_glow_processor.py input.mov output.mp4 "SIMPLE" --color purple --no-blur-background
+# Bright lime with maximum glow
+python text_glow_processor.py input.mov output.mp4 "EPIC" --color lime --glow-alpha 1.0
 ```
 
 ### Advanced Examples
@@ -71,8 +117,11 @@ python text_glow_processor.py input.mp4 output.mp4 "THIS IS A VERY LONG TEXT EXA
 # Multi-line text using line breaks
 python text_glow_processor.py video.mp4 result.mp4 "LINE 1\\nLINE 2" --color magenta
 
-# Custom positioning for specific content
-python text_glow_processor.py clip.avi output.mp4 "TOP TEXT" --color yellow --x 0.3 --y 0.2
+# No glow effect (sharp text only)
+python text_glow_processor.py clip.avi output.mp4 "SHARP TEXT" --color white --glow-alpha 0.0
+
+# Maximum glow for dramatic effect
+python text_glow_processor.py video.webm output.mp4 "INTENSE" --color cyan --glow-alpha 1.0
 ```
 
 ## Features
@@ -132,10 +181,11 @@ Input Video → Scale/Crop → Add Text → Create Glow Layer → Apply Blur →
 ```
 
 ### Glow Parameters
-- **Opacity**: 0.35 alpha for optimal visibility without background contamination
-- **Blur Radius**: 6 pixels for tight, controlled glow spread
+- **Opacity**: Configurable alpha (default 0.4) for optimal visibility
+- **Blur Radius**: 3 pixels for tight, controlled glow spread  
 - **Color Matching**: Identical color values for text and glow
-- **Positioning**: Precise alignment using calculated text metrics
+- **Positioning**: Fixed at 70% screen height with centered horizontal alignment
+- **Multi-layer**: Shadow (offset +3px) + glow (blurred) + sharp text overlay
 
 ## Input/Output Specifications
 
@@ -209,9 +259,9 @@ pip list | grep ffmpeg-python
 - Original audio is preserved automatically
 
 #### Glow Effect Too Subtle/Strong
-The glow parameters are optimized for most use cases. For custom adjustments, modify these values in the code:
-- `glow_alpha`: Controls glow intensity (current: 0.35)
-- `sigma`: Controls glow spread (current: 6)
+- Use `--glow-alpha` parameter to adjust glow intensity (0.0 to 1.0)
+- Default is 0.4 - increase for stronger glow, decrease for subtler effect
+- For extreme customization, modify `sigma` in code (current: 3.0)
 
 ### Performance Tips
 - Use shorter videos for testing
