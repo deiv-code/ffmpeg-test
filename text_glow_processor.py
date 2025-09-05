@@ -60,8 +60,8 @@ class TextGlowProcessor:
         return calculated_size
  
     def process_video(self, input_video, output_video, text, color='white', x=0.5, y=0.7,
-                                font_size=None, blur_background=False, glow_opacity=0.3, glow_blur=3.0):
-        """Process video using clean split/blur/overlay approach for text-only glow"""
+                                font_size=None, blur_background=False, glow_opacity=0.2, glow_blur=4.0, blend_mode='screen'):
+        """Process video using blend-based approach for enhanced text glow effects"""
         
         neon_color = self.colors.get(color.lower(), self.colors['white'])
         font_path = self.get_font_path()
@@ -113,15 +113,15 @@ class TextGlowProcessor:
             # Create integrated glow effect - glow first, then sharp text over it
             filter_complex.append(f'nullsrc=size=1080x1920:duration={duration}[null]')
             
-            # Create subtle glow layer that text will sit on top of
-            drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}@{glow_opacity}:x={x_pos}:y={y_pos}'
+            # Create glow layer with full opacity (blend controls final opacity)
+            drawtext_glow = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}:x={x_pos}:y={y_pos}'
             filter_complex.append(f'[null]{drawtext_glow}[glow_txt]')
             
             # Apply blur to create glow effect
             filter_complex.append(f'[glow_txt]gblur=sigma={glow_blur}[glow]')
             
-            # Apply glow to base video first
-            filter_complex.append('[base][glow]overlay[with_glow_bg]')
+            # Apply glow to base video using blend method with controlled opacity
+            filter_complex.append(f'[base][glow]blend=all_mode={blend_mode}:all_opacity={glow_opacity}[with_glow_bg]')
             
             # Now add sharp, bright text over the glow for integrated effect
             drawtext_final = f'drawtext=text=\'{processed_text}\':fontfile={font_path}:fontsize={calculated_font_size}:fontcolor={neon_color}:x={x_pos}:y={y_pos}'
@@ -180,10 +180,13 @@ Examples:
     parser.add_argument('--y', type=float, default=0.7,
                        help='Vertical position 0-1 (default: 0.7)')
     parser.add_argument('--size', type=int, help='Font size in pixels (default: auto)')
-    parser.add_argument('--glow-opacity', type=float, default=0.3,
-                       help='Glow opacity 0-1 (default: 0.3)')
-    parser.add_argument('--glow-blur', type=float, default=3.0,
-                       help='Glow blur sigma (default: 3.0)')
+    parser.add_argument('--glow-opacity', type=float, default=0.2,
+                       help='Glow opacity 0-1 (default: 0.2)')
+    parser.add_argument('--glow-blur', type=float, default=4.0,
+                       help='Glow blur sigma (default: 4.0)')
+    parser.add_argument('--blend-mode', default='screen',
+                       choices=['screen', 'overlay', 'multiply', 'addition', 'lighten', 'darken', 'softlight', 'hardlight'],
+                       help='Glow blend mode (default: screen)')
     parser.add_argument('--no-blur-background', action='store_true',
                        help='Use simple crop to fit (default: blurred background with centered video)')
     
@@ -219,7 +222,8 @@ Examples:
             font_size=args.size,
             blur_background=not args.no_blur_background,
             glow_opacity=args.glow_opacity,
-            glow_blur=args.glow_blur
+            glow_blur=args.glow_blur,
+            blend_mode=args.blend_mode
         )
         print(f"Output: {args.output_video}")
         
